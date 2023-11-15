@@ -26,7 +26,7 @@ class AclMiddleware implements MiddlewareInterface
      */
     protected ?LoggerInterface $logger;
 
-    const PERMISSION = "permission";
+    private const PERMISSION = "permission";
     private const TABLE_NAME = "account_permission";
 
     /**
