@@ -71,14 +71,8 @@ final class RateLimitMiddleware implements MiddlewareInterface
     {
         $serverParams = $request->getServerParams();
 
-        // Check forwarded headers (reverse proxy)
-        $forwarded = $request->getHeaderLine('X-Forwarded-For');
-        if ($forwarded) {
-            $ips = array_map('trim', explode(',', $forwarded));
-
-            return $ips[0];
-        }
-
+        // Only use REMOTE_ADDR — X-Forwarded-For is trivially spoofable
+        // without a trusted proxy allowlist
         return $serverParams['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 

@@ -36,6 +36,11 @@ final class CorsMiddleware implements MiddlewareInterface
     {
         $allowedOrigin = $this->resolveOrigin($origin);
 
+        // Don't add CORS headers if origin is not allowed
+        if ($allowedOrigin === '') {
+            return $response;
+        }
+
         return $response
             ->withHeader('Access-Control-Allow-Origin', $allowedOrigin)
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
@@ -53,6 +58,7 @@ final class CorsMiddleware implements MiddlewareInterface
             return $origin;
         }
 
-        return $this->allowedOrigins[0] ?? '*';
+        // Origin not in allowlist — don't send CORS headers
+        return '';
     }
 }

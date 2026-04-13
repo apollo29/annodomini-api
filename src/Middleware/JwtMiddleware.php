@@ -3,46 +3,35 @@
 namespace App\Middleware;
 
 use App\Support\JwtAuth;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Tuupola\Http\Factory\ResponseFactory;
 
-/**
- * JWT Middleware
- */
-class JwtMiddleware implements MiddlewareInterface
+final class JwtMiddleware implements MiddlewareInterface
 {
-    protected JwtAuth $jwtAuth;
+    private JwtAuth $jwtAuth;
+    private ResponseFactoryInterface $responseFactory;
 
-    /**
-     * The constructor.
-     *
-     * @param JwtAuth $jwtAuth JWT Auth Service
-     */
-    public function __construct(JwtAuth $jwtAuth)
+    public function __construct(JwtAuth $jwtAuth, ResponseFactoryInterface $responseFactory)
     {
         $this->jwtAuth = $jwtAuth;
+        $this->responseFactory = $responseFactory;
     }
 
-    /**
-     * @param ServerRequestInterface $request Server Request
-     * @param RequestHandlerInterface $handler Request Handler
-     * @return ResponseInterface
-     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $authorization = explode(' ', $request->getHeaderLine('Authorization'));
         $token = $authorization[1] ?? '';
 
         if (!$token || !$this->jwtAuth->validateToken($token)) {
-            return (new ResponseFactory())
-                ->createResponse(401)
-                ->withHeader(
-                    "Unauthorized",
-                    "Unauthorized"
-                );
+            $response = $this->responseFactory->createResponse(401);
+            $response->getBody()->write(json_encode([
+                'error' => ['message' => 'Unauthorized'],
+            ]));
+
+            return $response->withHeader('Content-Type', 'application/json');
         }
 
         // Append valid token

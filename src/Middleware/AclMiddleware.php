@@ -2,7 +2,7 @@
 
 namespace App\Middleware;
 
-use App\Factory\QueryFactory;
+use Apollo29\AnnoDomini\Support\QueryFactory;
 use Cake\Database\Connection;
 use Fig\Http\Message\StatusCodeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -47,12 +47,11 @@ class AclMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $response = $handler->handle($request);
         $routeArguments = RouteContext::fromRequest($request)->getRoute()->getArguments();
         if (array_key_exists(self::PERMISSION, $routeArguments)) {
             $user = $request->getAttribute('user');
             if (empty($user)) {
-                return $response->withStatus(StatusCodeInterface::STATUS_UNAUTHORIZED, "Unauthorized");
+                return $this->unauthorized();
             }
 
             $query = $this->queryFactory->newSelect(self::TABLE_NAME);
@@ -62,11 +61,19 @@ class AclMiddleware implements MiddlewareInterface
             $row = $query->execute()->fetch('assoc');
 
             if (!$row) {
-                return $response->withStatus(StatusCodeInterface::STATUS_UNAUTHORIZED, "Unauthorized");
+                return $this->unauthorized();
             }
         }
 
-        /* Everything ok, call next middleware. */
-        return $response;
+        // Authorization passed — proceed to handler
+        return $handler->handle($request);
+    }
+
+    private function unauthorized(): ResponseInterface
+    {
+        $response = (new \Nyholm\Psr7\Response(StatusCodeInterface::STATUS_UNAUTHORIZED));
+        $response->getBody()->write(json_encode(['error' => ['message' => 'Unauthorized']]));
+
+        return $response->withHeader('Content-Type', 'application/json');
     }
 }

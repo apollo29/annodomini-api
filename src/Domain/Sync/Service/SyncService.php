@@ -50,42 +50,61 @@ final class SyncService
     {
         $shouldInclude = fn(string $key) => empty($only) || in_array($key, $only, true);
 
-        // First check which types have updates
+        // Check which types have updates — used to skip unnecessary DB queries
         $updateTypes = $this->updateService->findByDate($since);
 
-        $updates = [];
         $typesWithUpdates = [];
+        $updatedTypeNames = [];
         foreach ($updateTypes as $update) {
             $typesWithUpdates[] = (array)$update;
+            $updatedTypeNames[] = $update->type;
         }
 
-        // Fetch data for each type that has updates
-        if ($shouldInclude('sets')) {
+        $hasUpdate = fn(string $type) => in_array($type, $updatedTypeNames, true);
+
+        // Only fetch data for types that actually have updates
+        $updates = [];
+
+        if ($shouldInclude('sets') && $hasUpdate('sets')) {
             $updates['sets'] = $this->toArray($this->setService->findByDate($since));
+        } else {
+            $updates['sets'] = [];
         }
 
-        if ($shouldInclude('cards')) {
+        if ($shouldInclude('cards') && $hasUpdate('cards')) {
             $updates['cards'] = $this->toArray($this->cardService->findByDate($since));
+        } else {
+            $updates['cards'] = [];
         }
 
-        if ($shouldInclude('opponents')) {
+        if ($shouldInclude('opponents') && $hasUpdate('opponents')) {
             $updates['opponents'] = $this->toArray($this->opponentService->findByDate($since));
+        } else {
+            $updates['opponents'] = [];
         }
 
-        if ($shouldInclude('skills')) {
+        if ($shouldInclude('skills') && ($hasUpdate('opponentskills') || $hasUpdate('skills'))) {
             $updates['skills'] = $this->toArray($this->skillsService->findByDate($since));
+        } else {
+            $updates['skills'] = [];
         }
 
-        if ($shouldInclude('virtual_sets')) {
+        if ($shouldInclude('virtual_sets') && $hasUpdate('virtual_sets')) {
             $updates['virtual_sets'] = $this->toArray($this->virtualSetService->findByDate($since));
+        } else {
+            $updates['virtual_sets'] = [];
         }
 
-        if ($shouldInclude('available_sets')) {
+        if ($shouldInclude('available_sets') && $hasUpdate('available_sets')) {
             $updates['available_sets'] = $this->toArray($this->availableSetService->findByDate($since));
+        } else {
+            $updates['available_sets'] = [];
         }
 
-        if ($shouldInclude('virtual_cards')) {
+        if ($shouldInclude('virtual_cards') && $hasUpdate('virtual_cards')) {
             $updates['virtual_cards'] = $this->toArray($this->virtualCardService->findByDate($since));
+        } else {
+            $updates['virtual_cards'] = [];
         }
 
         // Fetch removals — force object encoding even when empty

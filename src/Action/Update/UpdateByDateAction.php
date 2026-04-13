@@ -2,8 +2,6 @@
 
 namespace App\Action\Update;
 
-use App\Domain\Skills\Service\SkillsFinder;
-use App\Domain\Update\Service\UpdateFinder;
 use App\Domain\Update\Service\UpdateFinderService;
 use App\Renderer\JsonRenderer;
 use Psr\Http\Message\ResponseInterface;

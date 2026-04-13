@@ -3,7 +3,6 @@
 namespace App\Action\Info;
 
 use Apollo29\AnnoDomini\Repository\AnnoDominiFinderRepository;
-use App\Domain\Opponent\Service\OpponentFinder;
 use App\Renderer\JsonRenderer;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

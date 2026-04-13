@@ -56,7 +56,7 @@ class GameService
         $exist = $this->repository->existsId($game_id, AnnoDominiRepository::$GAME_TABLE_NAME, 'game_id');
         if ($exist) {
             $game = $this->repository->getGameById($game_id);
-            if ($game->player_id == $player_id) {
+            if ($game->player_id === $player_id) {
                 $this->repository->deleteGameById($game_id);
                 return true;
             } else {
@@ -73,23 +73,21 @@ class GameService
     private function generateId(): int
     {
         $ids = $this->repository->getGameIds();
+
         return $this->randomNumber(1001, 9999, $ids);
     }
 
-    /**
-     * @param int $from From number
-     * @param int $to To number
-     * @param array $excluded Additionally exclude numbers
-     * @return int
-     */
-    private function randomNumber($from, $to, array $excluded = []): int
+    private function randomNumber(int $from, int $to, array $excluded = []): int
     {
-        $func = function_exists('random_int') ? 'random_int' : 'mt_rand';
+        $maxAttempts = 100;
 
-        do {
-            $number = $func($from, $to);
-        } while (in_array($number, $excluded, true));
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            $number = random_int($from, $to);
+            if (!in_array($number, $excluded, true)) {
+                return $number;
+            }
+        }
 
-        return $number;
+        throw new \DomainException('Could not generate a unique game ID. Too many active games.');
     }
 }

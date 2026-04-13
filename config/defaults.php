@@ -60,6 +60,11 @@ $settings['db'] = [
     ],
 ];
 
+// API Key — must be overridden in env.php or via API_KEY environment variable
+$settings['apikey'] = [
+    'api_key' => '',
+];
+
 // Rate limiting
 $settings['rate_limit'] = [
     'storage_path' => __DIR__ . '/../tmp/rate_limit',

@@ -132,7 +132,7 @@ return [
 
         $filename = sprintf('%s/app.log', $settings['path']);
         $level = $settings['level'];
-        $rotatingFileHandler = new RotatingFileHandler($filename, 0, $level, true, 0777);
+        $rotatingFileHandler = new RotatingFileHandler($filename, 0, $level, true, 0640);
         $rotatingFileHandler->setFormatter(new LineFormatter(null, null, false, true));
         $logger->pushHandler($rotatingFileHandler);
 

@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Factory\QueryFactory;
+use Apollo29\AnnoDomini\Support\QueryFactory;
 use Cake\Database\Connection;
 use Psr\Log\LoggerInterface;
 use Tuupola\Middleware\HttpBasicAuthentication\AuthenticatorInterface;
@@ -55,7 +55,7 @@ class PDOAuth implements AuthenticatorInterface
         $row = $query->execute()->fetch('assoc');
 
         if (!$row || !$row['active']) {
-            $this->logger->warning("invalid auth attempt: " . $arguments['user']);
+            $this->logger?->warning("invalid auth attempt: " . $arguments['user']);
             return false;
         }
         return password_verify($arguments['password'], $row['password']);
