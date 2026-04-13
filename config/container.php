@@ -1,14 +1,12 @@
 <?php
 
-use App\Handler\DefaultErrorHandler;
-use App\Middleware\AclMiddleware;
 use App\Middleware\ApiKeyMiddleware;
+use App\Middleware\CorsMiddleware;
 use App\Middleware\ExceptionMiddleware;
-use App\Middleware\JwtMiddleware;
+use App\Middleware\RateLimitMiddleware;
+use App\Middleware\SecurityHeadersMiddleware;
 use App\Renderer\JsonRenderer;
 use App\Support\ApiKeyAuth;
-use App\Support\JwtAuth;
-use App\Support\PDOAuth;
 use Cake\Database\Connection;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
@@ -25,7 +23,6 @@ use Selective\BasePath\BasePathMiddleware;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Interfaces\RouteParserInterface;
-use Tuupola\Middleware\HttpBasicAuthentication;
 
 return [
     // Application settings
@@ -45,37 +42,6 @@ return [
 
     // Auth
 
-    AclMiddleware::class => function (ContainerInterface $container) {
-        $connection = $container->get(Connection::class);
-        $logger = $container->get(LoggerInterface::class);
-
-        return new AclMiddleware($connection, $logger);
-    },
-
-    PDOAuth::class => function (ContainerInterface $container) {
-        $connection = $container->get(Connection::class);
-        $logger = $container->get(LoggerInterface::class);
-
-        return new PDOAuth($connection, $logger);
-    },
-
-    JwtAuth::class => function (ContainerInterface $container) {
-        $settings = $container->get('settings')['jwt_auth'];
-
-        return new JwtAuth(
-            (string)$settings['issuer'],
-            (int)$settings['lifetime'],
-            (string)$settings['private_key'],
-            (string)$settings['public_key']
-        );
-    },
-
-    JwtMiddleware::class => function (ContainerInterface $container) {
-        $jwtAuth = $container->get(JwtAuth::class);
-
-        return new JwtMiddleware($jwtAuth);
-    },
-
     ApiKeyAuth::class => function (ContainerInterface $container) {
         $settings = $container->get('settings')['apikey'];
         return new ApiKeyAuth($settings['api_key']);
@@ -83,21 +49,37 @@ return [
 
     ApiKeyMiddleware::class => function (ContainerInterface $container) {
         $apiKeyAuth = $container->get(ApiKeyAuth::class);
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
 
-        return new ApiKeyMiddleware($apiKeyAuth);
+        return new ApiKeyMiddleware($apiKeyAuth, $responseFactory);
     },
 
-    HttpBasicAuthentication::class => function (ContainerInterface $container) {
-        $pdoAuth = $container->get(PDOAuth::class);
+    // New Middleware
 
-        return new HttpBasicAuthentication([
-            "secure" => true,
-            "relaxed" => ["localhost"],
-            "realm" => "Protected",
-            "authenticator" => $pdoAuth,
-            "before" => function ($request, $arguments) {
-                return $request->withAttribute("user", $arguments["user"]);
-            }]);
+    CorsMiddleware::class => function (ContainerInterface $container) {
+        $settings = $container->get('settings');
+        $allowedOrigins = $settings['cors']['allowed_origins'] ?? ['*'];
+
+        return new CorsMiddleware($allowedOrigins);
+    },
+
+    SecurityHeadersMiddleware::class => function () {
+        return new SecurityHeadersMiddleware();
+    },
+
+    RateLimitMiddleware::class => function (ContainerInterface $container) {
+        $settings = $container->get('settings');
+        $storagePath = $settings['rate_limit']['storage_path']
+            ?? __DIR__ . '/../tmp/rate_limit';
+        $maxRequests = $settings['rate_limit']['max_requests'] ?? 60;
+        $windowSeconds = $settings['rate_limit']['window_seconds'] ?? 60;
+
+        return new RateLimitMiddleware(
+            $container->get(ResponseFactoryInterface::class),
+            $storagePath,
+            $maxRequests,
+            $windowSeconds,
+        );
     },
 
     // HTTP factories
@@ -140,7 +122,6 @@ return [
 
         $class = new ReflectionClass($driver);
         $method = $class->getMethod('getPdo');
-        //$method->setAccessible(true);
 
         return $method->invoke($driver);
     },

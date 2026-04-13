@@ -3,19 +3,21 @@
 namespace App\Middleware;
 
 use App\Support\ApiKeyAuth;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Tuupola\Http\Factory\ResponseFactory;
 
-class ApiKeyMiddleware implements MiddlewareInterface
+final class ApiKeyMiddleware implements MiddlewareInterface
 {
     private ApiKeyAuth $apiKeyAuth;
+    private ResponseFactoryInterface $responseFactory;
 
-    public function __construct(ApiKeyAuth $apiKeyAuth)
+    public function __construct(ApiKeyAuth $apiKeyAuth, ResponseFactoryInterface $responseFactory)
     {
         $this->apiKeyAuth = $apiKeyAuth;
+        $this->responseFactory = $responseFactory;
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -24,12 +26,12 @@ class ApiKeyMiddleware implements MiddlewareInterface
         $apikey = $authorization[1] ?? '';
 
         if (!$apikey || !$this->apiKeyAuth->validate($apikey)) {
-            return (new ResponseFactory())
-                ->createResponse(401)
-                ->withHeader(
-                    "Unauthorized",
-                    "Unauthorized"
-                );
+            $response = $this->responseFactory->createResponse(401);
+            $response->getBody()->write(json_encode([
+                'error' => ['message' => 'Unauthorized'],
+            ]));
+
+            return $response->withHeader('Content-Type', 'application/json');
         }
 
         return $handler->handle($request);

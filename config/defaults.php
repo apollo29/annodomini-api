@@ -60,4 +60,16 @@ $settings['db'] = [
     ],
 ];
 
+// Rate limiting
+$settings['rate_limit'] = [
+    'storage_path' => __DIR__ . '/../tmp/rate_limit',
+    'max_requests' => 60,
+    'window_seconds' => 60,
+];
+
+// CORS
+$settings['cors'] = [
+    'allowed_origins' => ['*'],
+];
+
 return $settings;

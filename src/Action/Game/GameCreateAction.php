@@ -23,11 +23,22 @@ class GameCreateAction extends GameAction
         array                  $args
     ): ResponseInterface
     {
+        // v6: player_id from JSON body; legacy: from route args
+        if (array_key_exists('player_id', $args)) {
+            $player_id = (string)$args['player_id'];
+        } else {
+            $body = (array)$request->getParsedBody();
+            $player_id = (string)($body['player_id'] ?? '');
+        }
 
-        $player_id = (string)$args['player_id'];
+        if (empty($player_id)) {
+            return $this->renderer
+                ->json($response, ['error' => ['message' => 'player_id is required']])
+                ->withStatus(StatusCodeInterface::STATUS_BAD_REQUEST);
+        }
+
         $id = $this->service->create($player_id);
 
-        // Build the HTTP response
         return $this->renderer
             ->json($response, $id)
             ->withStatus(StatusCodeInterface::STATUS_CREATED);

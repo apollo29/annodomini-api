@@ -13,6 +13,7 @@ use App\Action\Remove\RemovalsByDateAction;
 use App\Action\Review\ReviewCardAction;
 use App\Action\Set\SetFindAction;
 use App\Action\Skills\SkillsFindAction;
+use App\Action\Sync\SyncAction;
 use App\Action\Update\UpdateByDateAction;
 use App\Action\VirtualCard\VirtualCardFindAction;
 use App\Action\VirtualSet\VirtualSetFindAction;
@@ -22,6 +23,33 @@ use Slim\Routing\RouteCollectorProxy;
 
 return function (App $app) {
     $app->get('/', HomeAction::class);
+
+    // =========================================================================
+    // v6 API — consolidated and simplified
+    // =========================================================================
+
+    $app->group(
+        '/v6',
+        function (RouteCollectorProxy $app) {
+
+            // Consolidated sync endpoint — replaces all /update/* and /removal/*
+            $app->get('/sync', SyncAction::class);
+
+            // Game endpoints (POST for create, DELETE with body)
+            // Static routes must come before variable routes
+            $app->post('/game', GameCreateAction::class);
+            $app->get('/game/expired', GameFindAction::class);
+            $app->get('/game/{game_id}', GameFindAction::class);
+            $app->delete('/game/{game_id}', GameDeleteAction::class);
+
+            // Review
+            $app->post('/review/cards', ReviewCardAction::class);
+        }
+    )->add(ApiKeyMiddleware::class);
+
+    // =========================================================================
+    // Legacy v5 routes — keep for backwards compatibility during migration
+    // =========================================================================
 
     // UPDATE
     $app->group(
@@ -35,7 +63,7 @@ return function (App $app) {
             $app->get('/virtual_sets/{date}', VirtualSetFindAction::class);
             $app->get('/available_sets/{date}', AvailableSetFindAction::class);
             $app->get('/virtual_cards/{date}', VirtualCardFindAction::class);
-            $app->get('/playing_cards/{date}', CardFindAction::class); // ???
+            $app->get('/playing_cards/{date}', CardFindAction::class);
         }
     )->add(ApiKeyMiddleware::class);
 

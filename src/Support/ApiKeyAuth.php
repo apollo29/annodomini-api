@@ -27,6 +27,6 @@ final class ApiKeyAuth
      */
     public function validate(string $apikey): bool
     {
-        return ($apikey == $this->apiKey);
+        return hash_equals($this->apiKey, $apikey);
     }
 }

@@ -22,12 +22,14 @@ class GameDeleteAction extends GameAction
         ResponseInterface $response,
         array $args
     ): ResponseInterface {
-        $data = $request->getQueryParams();
+        // Support player_id from query params (legacy) or JSON body (v6)
+        $queryParams = $request->getQueryParams();
+        $body = (array)$request->getParsedBody();
+        $player_id = $queryParams['player_id'] ?? $body['player_id'] ?? null;
 
-        if (array_key_exists("player_id", $data)) {
-            // Param
+        if ($player_id !== null) {
             $game_id = (int)$args['game_id'];
-            $result = $this->service->delete($game_id, $data['player_id']);
+            $result = $this->service->delete($game_id, (string)$player_id);
             if ($result) {
                 return $this->renderer->json($response);
             }
