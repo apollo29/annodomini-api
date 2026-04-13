@@ -42,7 +42,17 @@
       "Bash(curl -s \"http://api.annodomini.test/annodomini-api/v6/sync?since=20260101\" -H \"Authorization: Bearer c90dd289-ba7d-404e-a281-da13367f1522\")",
       "Bash(python -c 'import json,sys; d=json.load\\(sys.stdin\\);:*)",
       "Bash(python -c ':*)",
-      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('removals type:', type\\(d['removals']\\).__name__\\); print\\('removals:', json.dumps\\(d['removals']\\)\\)\")"
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('removals type:', type\\(d['removals']\\).__name__\\); print\\('removals:', json.dumps\\(d['removals']\\)\\)\")",
+      "Bash(./gradlew testDebugUnitTest)",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.communication.*\" --tests \"com.apollo29.annodomini.data.model.AvailableSetTest\")",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.GameEngineTest1\")",
+      "Bash(xargs grep:*)",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.GameEngineTest2\")",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.AnnoDominiUnitTestSuite\")",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.GameParametersTest\" --tests \"com.apollo29.annodomini.core.engine.GameEngineTest1\")",
+      "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.EngineTestSuite\")",
+      "Bash(grep -v \"^$\\\\|UP-TO-DATE\\\\|^>\")",
+      "Bash(./gradlew testDebugUnitTest --rerun-tasks)"
     ]
   }
 }
