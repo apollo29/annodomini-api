@@ -1,54 +1,120 @@
-<h1 align="center">
-  <img src="https://user-images.githubusercontent.com/781074/67567104-9fe7d000-f729-11e9-8a2d-0c7286475aac.png">
-</h1>
+# Anno Domini Game API
 
-<h3 align="center">Slim 4 Skeleton</h3>
-
-<div align="center">
-
-  [![Latest Version on Packagist](https://img.shields.io/github/release/odan/slim4-skeleton.svg)](https://packagist.org/packages/odan/slim4-skeleton)
-  [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
-  [![Build Status](https://github.com/odan/slim4-skeleton/workflows/build/badge.svg)](https://github.com/odan/slim4-skeleton/actions)
-  [![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/odan/slim4-skeleton.svg)](https://scrutinizer-ci.com/g/odan/slim4-skeleton/code-structure)
-  [![Quality Score](https://img.shields.io/scrutinizer/quality/g/odan/slim4-skeleton.svg)](https://scrutinizer-ci.com/g/odan/slim4-skeleton/?branch=master)
-  [![Total Downloads](https://img.shields.io/packagist/dt/odan/slim4-skeleton.svg)](https://packagist.org/packages/odan/slim4-skeleton/stats)
-
-This is a skeleton to quickly set up a new [Slim 4](https://www.slimframework.com/) application.
-
-</div>
+REST API for the [Anno Domini](https://annodomini.app) mobile card game. Built with PHP 8.2+ and Slim 4.
 
 ## Requirements
 
-* PHP 8.2
+- PHP 8.2+
+- MySQL 5.7+
+- Composer
 
-## Installation
+## Setup
 
-Read the **[documentation](https://odan.github.io/slim4-skeleton/installation.html)**
+```bash
+# Install dependencies
+composer install
 
-## Features
+# Configure environment (gitignored)
+cp config/env.php.example config/env.php
+# Edit config/env.php: database credentials, API key
 
-This project is based on best practices and industry standards:
+# Or set API key via environment variable
+export API_KEY="your-api-key"
 
-* [Standard PHP package skeleton](https://github.com/php-pds/skeleton)
-* HTTP router (Slim)
-* HTTP message interfaces (PSR-7)
-* HTTP Server Request Handlers, Middleware (PSR-15)
-* Dependency injection container (PSR-11)
-* Autoloader (PSR-4)
-* Logger (PSR-3)
-* Code styles (PSR-12)
-* Single action controllers
-* Unit- and integration tests
-* Tested with [Github Actions](https://github.com/odan/slim4-skeleton/actions) and [Scrutinizer CI](https://scrutinizer-ci.com/)
-* [PHPStan](https://github.com/phpstan/phpstan)
+# Start development server
+composer start
+# -> http://localhost:8080
+```
 
-## Support
+### Configuration
 
-* [Issues](https://github.com/odan/slim4-skeleton/issues)
-* [Blog](https://odan.github.io/)  
-* [Donate](https://odan.github.io/donate.html) for this project.
-* [Slim 4 eBooks](https://odan.github.io/donate.html)
+| File | Purpose |
+|------|---------|
+| `config/defaults.php` | Default settings (timezone, logging, rate limits, CORS) |
+| `config/env.php` | Database, API key, JWT keys (gitignored) |
+| `config/local.dev.php` | Development overrides |
+| `config/local.prod.php` | Production overrides |
+| `config/local.test.php` | Test overrides |
+
+## API v6 Endpoints
+
+All endpoints require `Authorization: Bearer <api-key>`.
+
+### Sync
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v6/sync?since=YYYYMMDD` | Returns all updates and removals since given date |
+| `GET` | `/v6/sync?since=0&only=sets,cards` | Filtered sync (comma-separated types) |
+
+Response:
+```json
+{
+  "timestamp": 20260413,
+  "update_types": [{"type": "sets", "date": 20241114}],
+  "updates": {
+    "sets": [], "cards": [], "opponents": [], "skills": [],
+    "virtual_sets": [], "available_sets": [], "virtual_cards": []
+  },
+  "removals": {}
+}
+```
+
+### Game
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v6/game` | Create game (`{"player_id": "..."}`) -> game_id |
+| `GET` | `/v6/game/{game_id}` | Get game details |
+| `GET` | `/v6/game/expired` | List expired games |
+| `DELETE` | `/v6/game/{game_id}?player_id=...` | Delete game |
+
+### Review
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v6/review/cards` | Submit card review |
+
+### Health
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ping` | Health check |
+
+## Middleware
+
+1. **ExceptionMiddleware** - JSON error responses, logging
+2. **RateLimitMiddleware** - 60 req/min per IP (configurable)
+3. **CorsMiddleware** - CORS headers, OPTIONS preflight
+4. **SecurityHeadersMiddleware** - HSTS, CSP, X-Frame-Options, X-Content-Type-Options
+5. **ApiKeyMiddleware** - timing-safe API key validation
+
+## Development
+
+```bash
+composer test          # PHPUnit tests
+composer test:coverage # Tests with coverage report
+composer cs:check      # Code style check
+composer cs:fix        # Auto-fix code style
+composer stan          # PHPStan static analysis
+composer test:all      # All checks
+```
+
+## Architecture
+
+```
+src/
+  Action/       # Single-action HTTP controllers
+  Domain/       # Business logic and services
+  Middleware/   # PSR-15 middleware (auth, CORS, rate limit, security)
+  Renderer/     # JSON response renderer
+  Support/      # Auth utilities (ApiKey, JWT)
+config/         # DI container, routes, settings
+public/         # Web root (index.php, .htaccess)
+tests/          # PHPUnit tests
+database/       # SQL schema
+```
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE) for more information.
+MIT

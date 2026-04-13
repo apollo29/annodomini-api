@@ -52,7 +52,11 @@
       "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.GameParametersTest\" --tests \"com.apollo29.annodomini.core.engine.GameEngineTest1\")",
       "Bash(./gradlew testDebugUnitTest --tests \"com.apollo29.annodomini.core.engine.EngineTestSuite\")",
       "Bash(grep -v \"^$\\\\|UP-TO-DATE\\\\|^>\")",
-      "Bash(./gradlew testDebugUnitTest --rerun-tasks)"
+      "Bash(./gradlew testDebugUnitTest --rerun-tasks)",
+      "Bash(bash build.sh)",
+      "Bash(cmd //c build.bat)",
+      "Bash(cmd //c \"cd /d C:\\\\laragon\\\\www\\\\api.annodomini\\\\annodomini-api && build.bat\")",
+      "Bash(cmd //c \"C:\\\\laragon\\\\www\\\\api.annodomini\\\\annodomini-api\\\\build.bat\")"
     ]
   }
 }
