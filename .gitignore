@@ -63,3 +63,4 @@ logs/*
 public/assets/*
 !public/assets/.htaccess
 
+/.claude/

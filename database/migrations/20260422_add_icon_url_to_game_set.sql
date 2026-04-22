@@ -8,11 +8,14 @@
 -- so older app versions continue to work. Once <5% of installs are on the old
 -- version, a follow-up migration can drop the `icon` column.
 --
--- Apply with:
---   mysql -u <user> -p <db> < database/migrations/20260422_add_icon_url_to_game_set.sql
+-- Apply with one of:
+--   * mysql -u <user> -p <db> < database/migrations/20260422_...sql
+--   * public/migrate.php?key=... (browser, via schema_migrations tracking)
+--   * phpMyAdmin -> SQL tab -> paste
 --
--- Idempotent check: only adds the column if it does not exist (MariaDB 10.2+ /
--- MySQL 8.0+). On older servers drop the IF NOT EXISTS and run once.
+-- Running this migration twice raises "Duplicate column name 'icon_url'"
+-- which migrate.php handles gracefully as "already applied". MySQL 8.0 does
+-- not support ADD COLUMN IF NOT EXISTS (MariaDB-only).
 
 ALTER TABLE `game_set`
-    ADD COLUMN IF NOT EXISTS `icon_url` VARCHAR(255) DEFAULT NULL AFTER `icon`;
+    ADD COLUMN `icon_url` VARCHAR(255) DEFAULT NULL AFTER `icon`;

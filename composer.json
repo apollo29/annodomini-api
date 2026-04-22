@@ -13,7 +13,7 @@
         "php": "8.2.* || 8.3.*",
         "ext-json": "*",
         "ext-pdo": "*",
-        "apollo29/annodomini-repository": "^0.3.5",
+        "apollo29/annodomini-repository": "^0.4.0",
         "cakephp/chronos": "^3",
         "cakephp/database": "^5",
         "cakephp/validation": "^5",
