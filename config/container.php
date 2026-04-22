@@ -7,6 +7,16 @@ use App\Middleware\RateLimitMiddleware;
 use App\Middleware\SecurityHeadersMiddleware;
 use App\Renderer\JsonRenderer;
 use App\Support\ApiKeyAuth;
+use App\Domain\Sync\Service\SyncService;
+use App\Domain\Update\Service\UpdateFinderService;
+use App\Domain\Set\Service\SetFinderService;
+use App\Domain\Card\Service\CardFinderService;
+use App\Domain\Opponent\Service\OpponentFinderService;
+use App\Domain\Skills\Service\SkillsFinderService;
+use App\Domain\VirtualSet\Service\VirtualSetFinderService;
+use App\Domain\AvailableSet\Service\AvailableSetFinderService;
+use App\Domain\VirtualCard\Service\VirtualCardFinderService;
+use App\Domain\Remove\Service\RemovalFinderService;
 use Cake\Database\Connection;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\RotatingFileHandler;
@@ -147,6 +157,24 @@ return [
             $container->get(JsonRenderer::class),
             $container->get(LoggerInterface::class),
             (bool)$settings['display_error_details'],
+        );
+    },
+
+    // Issue #196: Sync service needs the icon base URL for serving static icons
+    SyncService::class => function (ContainerInterface $container) {
+        $iconBaseUrl = $container->get('settings')['icon_base_url'] ?? 'https://api.annodomini.app';
+
+        return new SyncService(
+            $container->get(UpdateFinderService::class),
+            $container->get(SetFinderService::class),
+            $container->get(CardFinderService::class),
+            $container->get(OpponentFinderService::class),
+            $container->get(SkillsFinderService::class),
+            $container->get(VirtualSetFinderService::class),
+            $container->get(AvailableSetFinderService::class),
+            $container->get(VirtualCardFinderService::class),
+            $container->get(RemovalFinderService::class),
+            (string)$iconBaseUrl,
         );
     },
 ];

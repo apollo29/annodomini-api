@@ -77,4 +77,10 @@ $settings['cors'] = [
     'allowed_origins' => ['*'],
 ];
 
+// Icon serving (Issue #196)
+// Base URL under which /icons/{uid}.svg is served. Kept separate so icons
+// can later move to a CDN (e.g. https://assets.annodomini.app) without code
+// changes — only update ICON_BASE_URL env var on the server.
+$settings['icon_base_url'] = getenv('ICON_BASE_URL') ?: 'https://api.annodomini.app';
+
 return $settings;

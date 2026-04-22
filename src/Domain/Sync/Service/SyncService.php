@@ -23,6 +23,7 @@ final class SyncService
     private AvailableSetFinderService $availableSetService;
     private VirtualCardFinderService $virtualCardService;
     private RemovalFinderService $removalService;
+    private string $iconBaseUrl;
 
     public function __construct(
         UpdateFinderService $updateService,
@@ -34,6 +35,7 @@ final class SyncService
         AvailableSetFinderService $availableSetService,
         VirtualCardFinderService $virtualCardService,
         RemovalFinderService $removalService,
+        string $iconBaseUrl = 'https://api.annodomini.app',
     ) {
         $this->updateService = $updateService;
         $this->setService = $setService;
@@ -44,6 +46,7 @@ final class SyncService
         $this->availableSetService = $availableSetService;
         $this->virtualCardService = $virtualCardService;
         $this->removalService = $removalService;
+        $this->iconBaseUrl = rtrim($iconBaseUrl, '/');
     }
 
     public function sync(int $since, array $only = []): array
@@ -66,7 +69,7 @@ final class SyncService
         $updates = [];
 
         if ($shouldInclude('sets') && $hasUpdate('sets')) {
-            $updates['sets'] = $this->toArray($this->setService->findByDate($since));
+            $updates['sets'] = $this->setsToArray($this->setService->findByDate($since));
         } else {
             $updates['sets'] = [];
         }
@@ -124,5 +127,29 @@ final class SyncService
     private function toArray(array $items): array
     {
         return array_map(fn($item) => (array)$item, $items);
+    }
+
+    /**
+     * Convert SetData objects to arrays and inject icon_url.
+     *
+     * Issue #196: Icons are served as static SVG files under /icons/{uid}.svg.
+     * If the SetData already carries a stored icon_url (post-extraction), we
+     * use it as-is; otherwise we derive the URL from the configured base URL
+     * and the set's uid so clients always receive a usable URL.
+     */
+    private function setsToArray(array $items): array
+    {
+        return array_map(function ($item) {
+            $row = (array)$item;
+
+            $storedUrl = $row['icon_url'] ?? null;
+            if (!empty($storedUrl)) {
+                $row['icon_url'] = $storedUrl;
+            } elseif (!empty($row['uid'])) {
+                $row['icon_url'] = $this->iconBaseUrl . '/icons/' . $row['uid'] . '.svg';
+            }
+
+            return $row;
+        }, $items);
     }
 }

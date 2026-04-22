@@ -487,6 +487,39 @@ PHP-Binary explizit angeben:
 
 ---
 
+## Datenbank-Migrationen
+
+Migrations liegen unter `database/migrations/` und werden manuell per `mysql`
+oder Plesk phpMyAdmin eingespielt.
+
+### Icons als statische SVGs (Issue #196)
+
+Seit v6 werden Set-Icons als statische SVG-Dateien unter `/icons/{uid}.svg`
+ausgeliefert. Die Sync-Response enthält weiterhin das base64 `icon`-Feld fuer
+Rueckwaertskompatibilitaet plus ein neues `icon_url`-Feld.
+
+```bash
+# 1. Schema-Migration anwenden (einmalig)
+mysql -u DBUSER -p -h 127.0.0.1 annodomini \
+    < database/migrations/20260422_add_icon_url_to_game_set.sql
+
+# 2. Bestehende Icons aus base64 extrahieren und unter public/icons/ speichern
+/opt/plesk/php/8.3/bin/php bin/extract-icons.php
+
+# 3. Verify
+curl https://api.annodomini.app/icons/1.svg   # sollte SVG liefern
+```
+
+Das Extraktions-Script ist idempotent — bei Re-Run werden SVGs überschrieben
+und `icon_url` konsistent gehalten.
+
+Das Verzeichnis `public/icons/` hat ein eigenes `.htaccess` mit
+`Cache-Control: max-age=31536000, immutable`. Icons sind per `{uid}`
+inhaltsadressiert — bei Icon-Änderung muss ein Cache-Buster (z.B. `?v={date}`)
+angefügt werden oder die `uid` wechseln.
+
+---
+
 ## Checkliste Erstinstallation
 
 - [ ] Domain in Plesk eingerichtet
@@ -497,15 +530,21 @@ PHP-Binary explizit angeben:
 - [ ] `composer install --no-dev --optimize-autoloader`
 - [ ] Datenbank in Plesk erstellt
 - [ ] Schema importiert (`database/annodomini.sql`)
+- [ ] Alle Migrations aus `database/migrations/` angewendet
+- [ ] Icons extrahiert: `php bin/extract-icons.php`
 - [ ] `config/env.php` erstellt (DB: `127.0.0.1`, API Key)
 - [ ] DocumentRoot zeigt auf `annodomini-api/public`
 - [ ] `logs/` und `tmp/` schreibbar (chmod 775)
+- [ ] `public/icons/` schreibbar fuer PHP-User (chmod 775)
 - [ ] `curl https://api.annodomini.app/ping` -> `{"success":true}`
+- [ ] `curl https://api.annodomini.app/icons/1.svg` -> SVG-Inhalt
 
 ## Checkliste Update
 
 - [ ] `git pull origin main`
 - [ ] `composer install --no-dev --optimize-autoloader`
+- [ ] Neue Migrations aus `database/migrations/` anwenden (falls vorhanden)
+- [ ] Bei neuen/geänderten Icons: `php bin/extract-icons.php`
 - [ ] `rm -f tmp/rate_limit/*.json`
 - [ ] Health Check: `/ping`
 

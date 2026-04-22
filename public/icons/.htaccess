@@ -1,0 +1,22 @@
+# Anno Domini — static icon serving (Issue #196)
+# Icons are immutable (content-addressed by uid). Long browser + CDN cache.
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
+    Header set Access-Control-Allow-Origin "*"
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType image/svg+xml .svg
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Do not route these through index.php (Slim) — serve files directly.
+# Root .htaccess already skips existing files via !-f, but we keep the
+# RewriteEngine off here as a defensive measure in case it ever changes.
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>

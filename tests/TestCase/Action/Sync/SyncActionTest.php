@@ -86,4 +86,52 @@ class SyncActionTest extends TestCase
 
         $this->assertSame((int)date('Ymd'), $data['timestamp']);
     }
+
+    public function testEachSetInSyncResponseHasIconUrl(): void
+    {
+        // Issue #196: icon_url must be included for every set so clients can
+        // fetch icons as separate static files instead of inline base64 blobs.
+        $request = $this->createRequest('GET', '/v6/sync?since=0')
+            ->withHeader('Authorization', $this->authHeader())
+            ->withHeader('Accept', 'application/json');
+        $response = $this->app->handle($request);
+
+        $data = $this->getJsonData($response);
+        $sets = $data['updates']['sets'];
+
+        $this->assertNotEmpty($sets, 'Expected at least one set in sync response');
+
+        foreach ($sets as $set) {
+            $this->assertArrayHasKey('icon_url', $set, "Set {$set['uid']} must contain 'icon_url'");
+            $this->assertIsString($set['icon_url'], "Set {$set['uid']} 'icon_url' must be a string");
+            $this->assertMatchesRegularExpression(
+                '#^https?://[^/]+/icons/\d+\.svg$#',
+                $set['icon_url'],
+                "Set {$set['uid']} 'icon_url' must match pattern https://host/icons/{uid}.svg"
+            );
+            $this->assertStringEndsWith(
+                '/icons/' . $set['uid'] . '.svg',
+                $set['icon_url'],
+                "Set {$set['uid']} 'icon_url' must reference its own uid"
+            );
+        }
+    }
+
+    public function testSyncResponseKeepsIconBase64ForBackwardCompatibility(): void
+    {
+        // During the transition, existing clients still rely on the base64
+        // `icon` field. It must remain present alongside icon_url.
+        $request = $this->createRequest('GET', '/v6/sync?since=0')
+            ->withHeader('Authorization', $this->authHeader())
+            ->withHeader('Accept', 'application/json');
+        $response = $this->app->handle($request);
+
+        $data = $this->getJsonData($response);
+        $sets = $data['updates']['sets'];
+
+        $this->assertNotEmpty($sets);
+        foreach ($sets as $set) {
+            $this->assertArrayHasKey('icon', $set, "Set {$set['uid']} must keep legacy 'icon' field");
+        }
+    }
 }
