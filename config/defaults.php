@@ -78,9 +78,11 @@ $settings['cors'] = [
 ];
 
 // Icon serving (Issue #196)
-// Base URL under which /icons/{uid}.svg is served. Kept separate so icons
-// can later move to a CDN (e.g. https://assets.annodomini.app) without code
-// changes — only update ICON_BASE_URL env var on the server.
-$settings['icon_base_url'] = getenv('ICON_BASE_URL') ?: 'https://api.annodomini.app';
+// Base URL under which /icons/{uid}.svg is served.
+// Empty (default) = auto-detect from current request host, so dev/staging/prod
+// each serve their own icons without per-env config.
+// Set to a full URL (e.g. "https://assets.annodomini.app") via ICON_BASE_URL
+// env var to pin icons to a CDN.
+$settings['icon_base_url'] = getenv('ICON_BASE_URL') ?: '';
 
 return $settings;

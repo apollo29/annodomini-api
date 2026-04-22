@@ -160,10 +160,9 @@ return [
         );
     },
 
-    // Issue #196: Sync service needs the icon base URL for serving static icons
+    // Issue #196: Sync service — iconsDir let us verify the SVG exists before
+    // emitting a URL (otherwise clients get 404s).
     SyncService::class => function (ContainerInterface $container) {
-        $iconBaseUrl = $container->get('settings')['icon_base_url'] ?? 'https://api.annodomini.app';
-
         return new SyncService(
             $container->get(UpdateFinderService::class),
             $container->get(SetFinderService::class),
@@ -174,7 +173,20 @@ return [
             $container->get(AvailableSetFinderService::class),
             $container->get(VirtualCardFinderService::class),
             $container->get(RemovalFinderService::class),
-            (string)$iconBaseUrl,
+            // Resolve icons dir relative to public/
+            realpath(__DIR__ . '/../public/icons') ?: (__DIR__ . '/../public/icons'),
+        );
+    },
+
+    \App\Action\Sync\SyncAction::class => function (ContainerInterface $container) {
+        // icon_base_url from config is optional: empty means "use whatever
+        // host the request came in on" (handled inside SyncAction).
+        $configured = (string)($container->get('settings')['icon_base_url'] ?? '');
+
+        return new \App\Action\Sync\SyncAction(
+            $container->get(SyncService::class),
+            $container->get(JsonRenderer::class),
+            $configured,
         );
     },
 ];

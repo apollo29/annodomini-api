@@ -23,7 +23,7 @@ final class SyncService
     private AvailableSetFinderService $availableSetService;
     private VirtualCardFinderService $virtualCardService;
     private RemovalFinderService $removalService;
-    private string $iconBaseUrl;
+    private string $iconsDir;
 
     public function __construct(
         UpdateFinderService $updateService,
@@ -35,7 +35,7 @@ final class SyncService
         AvailableSetFinderService $availableSetService,
         VirtualCardFinderService $virtualCardService,
         RemovalFinderService $removalService,
-        string $iconBaseUrl = 'https://api.annodomini.app',
+        ?string $iconsDir = null,
     ) {
         $this->updateService = $updateService;
         $this->setService = $setService;
@@ -46,10 +46,21 @@ final class SyncService
         $this->availableSetService = $availableSetService;
         $this->virtualCardService = $virtualCardService;
         $this->removalService = $removalService;
-        $this->iconBaseUrl = rtrim($iconBaseUrl, '/');
+        $this->iconsDir = $iconsDir ?? realpath(__DIR__ . '/../../../../public/icons') ?: '';
     }
 
-    public function sync(int $since, array $only = []): array
+    /**
+     * Build a sync payload for the given since-timestamp.
+     *
+     * @param int    $since         since-date (YYYYMMDD) or 0 for "all"
+     * @param array  $only          optional filter on dataset types
+     * @param string $iconBaseUrl   base URL to prepend to icon paths; if empty,
+     *                              falls back to "https://api.annodomini.app"
+     *                              (tests/legacy). Caller (SyncAction) is
+     *                              expected to pass the current request's URL
+     *                              so dev/prod each serve their own icons.
+     */
+    public function sync(int $since, array $only = [], string $iconBaseUrl = ''): array
     {
         $shouldInclude = fn(string $key) => empty($only) || in_array($key, $only, true);
 
@@ -69,7 +80,10 @@ final class SyncService
         $updates = [];
 
         if ($shouldInclude('sets') && $hasUpdate('sets')) {
-            $updates['sets'] = $this->setsToArray($this->setService->findByDate($since));
+            $updates['sets'] = $this->setsToArray(
+                $this->setService->findByDate($since),
+                $iconBaseUrl ?: 'https://api.annodomini.app'
+            );
         } else {
             $updates['sets'] = [];
         }
@@ -133,23 +147,57 @@ final class SyncService
      * Convert SetData objects to arrays and inject icon_url.
      *
      * Issue #196: Icons are served as static SVG files under /icons/{uid}.svg.
-     * If the SetData already carries a stored icon_url (post-extraction), we
-     * use it as-is; otherwise we derive the URL from the configured base URL
-     * and the set's uid so clients always receive a usable URL.
+     * Priority order for icon_url:
+     *   1. stored icon_url column in DB (set by extract-icons / migrate.php)
+     *   2. derived from uid — but only if the SVG file physically exists on
+     *      disk, so we never hand clients a URL that will 404.
+     *   3. omitted entirely (null) — client then falls back to the base64
+     *      `icon` field which is always present.
      */
-    private function setsToArray(array $items): array
+    private function setsToArray(array $items, string $iconBaseUrl): array
     {
-        return array_map(function ($item) {
-            $row = (array)$item;
+        $base = rtrim($iconBaseUrl, '/');
 
-            $storedUrl = $row['icon_url'] ?? null;
+        return array_map(function ($item) use ($base) {
+            $row = (array)$item;
+            unset($row['icon_url']);  // reset, we re-derive below
+            $uid = $row['uid'] ?? null;
+
+            if (empty($uid)) {
+                return $row;
+            }
+
+            // Prefer stored URL (from migrate.php). If that URL was generated
+            // for a different host (e.g. prod URL stored but sync requested
+            // on dev), replace the host part so clients always get the URL
+            // for the host they just called.
+            $storedUrl = $item->icon_url ?? null;
             if (!empty($storedUrl)) {
-                $row['icon_url'] = $storedUrl;
-            } elseif (!empty($row['uid'])) {
-                $row['icon_url'] = $this->iconBaseUrl . '/icons/' . $row['uid'] . '.svg';
+                $row['icon_url'] = $this->replaceHost($storedUrl, $base);
+
+                return $row;
+            }
+
+            // No stored URL — derive from uid, but only if the SVG file
+            // actually exists on disk. Otherwise omit so the client falls
+            // back to base64.
+            if ($this->iconsDir !== '' && is_file($this->iconsDir . '/' . $uid . '.svg')) {
+                $row['icon_url'] = $base . '/icons/' . $uid . '.svg';
             }
 
             return $row;
         }, $items);
+    }
+
+    /**
+     * Replace the scheme+host of $storedUrl with $base, keeping the path.
+     * Used so stored icon_urls (possibly pointing at prod) follow the
+     * current request host on dev/staging.
+     */
+    private function replaceHost(string $storedUrl, string $base): string
+    {
+        $path = parse_url($storedUrl, PHP_URL_PATH) ?: '/';
+
+        return rtrim($base, '/') . $path;
     }
 }
