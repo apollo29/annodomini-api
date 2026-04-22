@@ -1,20 +1,6 @@
 # Redirect to front controller
 RewriteEngine On
 # RewriteBase /
-
-# Issue #196: When the root .htaccess rewrites (.*) -> public/$1, Apache
-# applies THIS .htaccess with REQUEST_URI still pointing at /icons/29.svg
-# (without the /public/ prefix). REQUEST_FILENAME then resolves against
-# DOCUMENT_ROOT, which on Plesk may be the project root rather than
-# public/. That makes `-f` false even when public/icons/29.svg exists,
-# and Slim serves a 404.
-#
-# Check explicitly against DOCUMENT_ROOT/public%{REQUEST_URI}: if the file
-# lives there, serve it directly and skip the rewrite to index.php.
-RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f [OR]
-RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
-RewriteRule ^ - [L]
-
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [QSA,L]

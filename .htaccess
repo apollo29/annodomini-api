@@ -1,3 +1,9 @@
 RewriteEngine On
+
+# Issue #196: Serve icon SVGs directly from public/icons/ without Slim routing.
+# Required on hosts (Plesk default) where DocumentRoot points at the project
+# root instead of public/.
+RewriteRule ^icons/(.+\.svg)$ public/icons/$1 [L]
+
 RewriteRule ^$ public/ [L]
 RewriteRule (.*) public/$1 [L]
