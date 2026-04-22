@@ -498,20 +498,35 @@ Seit v6 werden Set-Icons als statische SVG-Dateien unter `/icons/{uid}.svg`
 ausgeliefert. Die Sync-Response enthält weiterhin das base64 `icon`-Feld fuer
 Rueckwaertskompatibilitaet plus ein neues `icon_url`-Feld.
 
-```bash
-# 1. Schema-Migration anwenden (einmalig)
-mysql -u DBUSER -p -h 127.0.0.1 annodomini \
-    < database/migrations/20260422_add_icon_url_to_game_set.sql
+#### Variante A — Browser-aufrufbares Migrations-Tool (empfohlen bei Plesk ohne SSH)
 
-# 2. Bestehende Icons aus base64 extrahieren und unter public/icons/ speichern
+`public/migrate.php` wendet alle Migrations an **und** extrahiert die Icons
+in einem Rutsch. Idempotent per `schema_migrations`-Tabelle — mehrfach
+aufrufbar.
+
+1. Vor dem Upload: `$setupKey` in `public/migrate.php` aendern.
+2. Im Browser aufrufen:
+   ```
+   https://api.annodomini.app/migrate.php?key=DEIN-SETUP-KEY
+   ```
+3. Ausgabe pruefen (sollte mit "Fertig." enden).
+4. **Nach Erfolg die Datei loeschen** (Plesk → Dateien → `public/migrate.php`).
+
+#### Variante B — phpMyAdmin + SSH
+
+```bash
+# 1. Migration per phpMyAdmin (Plesk → Datenbanken → phpMyAdmin → Tab "SQL")
+#    Inhalt von database/migrations/20260422_add_icon_url_to_game_set.sql einfuegen.
+
+# 2. Icons extrahieren (nur per SSH)
 /opt/plesk/php/8.3/bin/php bin/extract-icons.php
 
 # 3. Verify
 curl https://api.annodomini.app/icons/1.svg   # sollte SVG liefern
 ```
 
-Das Extraktions-Script ist idempotent — bei Re-Run werden SVGs überschrieben
-und `icon_url` konsistent gehalten.
+Beide Scripts sind idempotent — bei Re-Run werden SVGs überschrieben und
+`icon_url` konsistent gehalten.
 
 Das Verzeichnis `public/icons/` hat ein eigenes `.htaccess` mit
 `Cache-Control: max-age=31536000, immutable`. Icons sind per `{uid}`
