@@ -163,6 +163,9 @@ return [
     // Issue #196: Sync service — iconsDir let us verify the SVG exists before
     // emitting a URL (otherwise clients get 404s).
     SyncService::class => function (ContainerInterface $container) {
+        $settings = $container->get('settings');
+        $iconPathPrefix = (string)($settings['icon_path_prefix'] ?? 'icons');
+
         return new SyncService(
             $container->get(UpdateFinderService::class),
             $container->get(SetFinderService::class),
@@ -175,6 +178,7 @@ return [
             $container->get(RemovalFinderService::class),
             // Resolve icons dir relative to public/
             realpath(__DIR__ . '/../public/icons') ?: (__DIR__ . '/../public/icons'),
+            $iconPathPrefix,
         );
     },
 

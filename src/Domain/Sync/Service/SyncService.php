@@ -24,6 +24,7 @@ final class SyncService
     private VirtualCardFinderService $virtualCardService;
     private RemovalFinderService $removalService;
     private string $iconsDir;
+    private string $iconPathPrefix;
 
     public function __construct(
         UpdateFinderService $updateService,
@@ -36,6 +37,7 @@ final class SyncService
         VirtualCardFinderService $virtualCardService,
         RemovalFinderService $removalService,
         ?string $iconsDir = null,
+        string $iconPathPrefix = 'icons',
     ) {
         $this->updateService = $updateService;
         $this->setService = $setService;
@@ -47,6 +49,7 @@ final class SyncService
         $this->virtualCardService = $virtualCardService;
         $this->removalService = $removalService;
         $this->iconsDir = $iconsDir ?? realpath(__DIR__ . '/../../../../public/icons') ?: '';
+        $this->iconPathPrefix = trim($iconPathPrefix, '/');
     }
 
     /**
@@ -157,47 +160,29 @@ final class SyncService
     private function setsToArray(array $items, string $iconBaseUrl): array
     {
         $base = rtrim($iconBaseUrl, '/');
+        $prefix = $this->iconPathPrefix;
 
-        return array_map(function ($item) use ($base) {
+        return array_map(function ($item) use ($base, $prefix) {
             $row = (array)$item;
             unset($row['icon_url']);  // reset, we re-derive below
             $uid = $row['uid'] ?? null;
 
-            if (empty($uid)) {
+            if (empty($uid) || $this->iconsDir === '') {
                 return $row;
             }
 
-            // Prefer stored URL (from migrate.php). If that URL was generated
-            // for a different host (e.g. prod URL stored but sync requested
-            // on dev), replace the host part so clients always get the URL
-            // for the host they just called.
-            $storedUrl = $item->icon_url ?? null;
-            if (!empty($storedUrl)) {
-                $row['icon_url'] = $this->replaceHost($storedUrl, $base);
+            // Only emit icon_url when the SVG file actually exists on disk —
+            // prevents clients from chasing 404 URLs. If a stored icon_url
+            // exists in the DB (from migrate.php), trust it as proof the file
+            // is there; otherwise check the filesystem.
+            $hasFile = !empty($item->icon_url ?? null)
+                || is_file($this->iconsDir . '/' . $uid . '.svg');
 
-                return $row;
-            }
-
-            // No stored URL — derive from uid, but only if the SVG file
-            // actually exists on disk. Otherwise omit so the client falls
-            // back to base64.
-            if ($this->iconsDir !== '' && is_file($this->iconsDir . '/' . $uid . '.svg')) {
-                $row['icon_url'] = $base . '/icons/' . $uid . '.svg';
+            if ($hasFile) {
+                $row['icon_url'] = $base . '/' . $prefix . '/' . $uid . '.svg';
             }
 
             return $row;
         }, $items);
-    }
-
-    /**
-     * Replace the scheme+host of $storedUrl with $base, keeping the path.
-     * Used so stored icon_urls (possibly pointing at prod) follow the
-     * current request host on dev/staging.
-     */
-    private function replaceHost(string $storedUrl, string $base): string
-    {
-        $path = parse_url($storedUrl, PHP_URL_PATH) ?: '/';
-
-        return rtrim($base, '/') . $path;
     }
 }

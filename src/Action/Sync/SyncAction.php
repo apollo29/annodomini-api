@@ -67,11 +67,34 @@ final class SyncAction
             $base .= ':' . $port;
         }
 
-        // BasePathMiddleware stores any sub-path prefix on the request.
-        // We respect it so that e.g. https://host.tld/annodomini-api/icons/...
-        // works when the app lives in a subdirectory.
-        $basePath = (string)$request->getAttribute('basePath', '');
+        // Detect a base path (e.g. /annodomini-api when the app lives in a
+        // subdirectory). Derived from SCRIPT_NAME the same way
+        // selective/basepath does it.
+        $basePath = $this->detectBasePath($request->getServerParams());
 
         return rtrim($base . $basePath, '/');
+    }
+
+    private function detectBasePath(array $server): string
+    {
+        if (empty($server['SCRIPT_NAME']) || empty($server['REQUEST_URI'])) {
+            return '';
+        }
+
+        // SCRIPT_NAME is e.g. /annodomini-api/public/index.php — strip the
+        // file and the "public" folder to get the app-root prefix.
+        $scriptDir = str_replace('\\', '/', dirname((string)$server['SCRIPT_NAME'], 2));
+        if ($scriptDir === '' || $scriptDir === '/' || $scriptDir === '.') {
+            return '';
+        }
+
+        // Sanity-check against REQUEST_URI so we only return a prefix that
+        // actually precedes the request path.
+        $requestPath = (string)parse_url((string)$server['REQUEST_URI'], PHP_URL_PATH);
+        if (!str_starts_with($requestPath, $scriptDir)) {
+            return '';
+        }
+
+        return $scriptDir;
     }
 }

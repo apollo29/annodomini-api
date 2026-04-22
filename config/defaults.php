@@ -78,11 +78,21 @@ $settings['cors'] = [
 ];
 
 // Icon serving (Issue #196)
-// Base URL under which /icons/{uid}.svg is served.
+// Base URL under which icons are served.
 // Empty (default) = auto-detect from current request host, so dev/staging/prod
 // each serve their own icons without per-env config.
 // Set to a full URL (e.g. "https://assets.annodomini.app") via ICON_BASE_URL
 // env var to pin icons to a CDN.
 $settings['icon_base_url'] = getenv('ICON_BASE_URL') ?: '';
+
+// Path prefix under which icons are reachable.
+// Default: "icons" -> URL becomes /icons/{uid}.svg
+//          requires DocumentRoot to be public/, OR a working rewrite that
+//          exposes public/icons/ at /icons/.
+// On Plesk/shared hosting where DocumentRoot is the project root and
+// rewrites don't reach static files, set ICON_PATH_PREFIX=public/icons
+// so the URL becomes /public/icons/{uid}.svg — Apache finds the file on
+// disk directly, no rewrite needed.
+$settings['icon_path_prefix'] = getenv('ICON_PATH_PREFIX') ?: 'icons';
 
 return $settings;

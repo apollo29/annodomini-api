@@ -31,16 +31,25 @@ require __DIR__ . '/../vendor/autoload.php';
 $settings = require __DIR__ . '/../config/settings.php';
 
 $db = $settings['db'];
-$iconBaseUrl = rtrim((string)($settings['icon_base_url'] ?? 'https://api.annodomini.app'), '/');
+$iconBaseUrl = rtrim((string)($settings['icon_base_url'] ?? ''), '/');
+$iconPathPrefix = trim((string)($settings['icon_path_prefix'] ?? 'icons'), '/');
 $migrationsDir = realpath(__DIR__ . '/..') . '/database/migrations';
 $iconsDir = realpath(__DIR__) . '/icons';
+
+// If icon_base_url is empty (default), derive from current request.
+if ($iconBaseUrl === '') {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $iconBaseUrl = $scheme . '://' . $host;
+}
 
 echo "Anno Domini API - Migrate\n";
 echo "==========================\n\n";
 echo "DB:             {$db['database']}@{$db['host']}\n";
 echo "Migrations:     $migrationsDir\n";
 echo "Icons Ziel:     $iconsDir\n";
-echo "Icon-URL-Basis: $iconBaseUrl\n\n";
+echo "Icon-URL-Basis: $iconBaseUrl\n";
+echo "Icon-Pfad:      /$iconPathPrefix/{uid}.svg\n\n";
 
 try {
     $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $db['host'], $db['database']);
@@ -149,7 +158,7 @@ foreach ($rows as $row) {
         continue;
     }
 
-    $url = $iconBaseUrl . '/icons/' . $uid . '.svg';
+    $url = $iconBaseUrl . '/' . $iconPathPrefix . '/' . $uid . '.svg';
     $updateStmt->execute([':url' => $url, ':uid' => $uid]);
 
     echo "  OK   uid=$uid  -  " . strlen($svg) . " bytes\n";
