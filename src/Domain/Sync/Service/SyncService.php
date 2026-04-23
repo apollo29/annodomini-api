@@ -180,6 +180,10 @@ final class SyncService
 
             if ($hasFile) {
                 $row['icon_url'] = $base . '/' . $prefix . '/' . $uid . '.svg';
+                // Issue #196 Phase B: once icon_url is live, the base64 icon
+                // is redundant payload. Strip it to shrink the sync response.
+                // Sets WITHOUT icon_url keep the base64 `icon` as fallback.
+                unset($row['icon']);
             }
 
             return $row;

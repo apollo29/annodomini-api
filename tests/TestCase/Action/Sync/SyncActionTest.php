@@ -163,10 +163,15 @@ class SyncActionTest extends TestCase
         }
     }
 
-    public function testSyncResponseKeepsIconBase64ForBackwardCompatibility(): void
+    public function testIconBase64StrippedWhenIconUrlPresent(): void
     {
-        // During the transition, existing clients still rely on the base64
-        // `icon` field. It must remain present alongside icon_url.
+        // Issue #196 Phase B: once icon_url ships, the base64 `icon` field
+        // is redundant payload. Clients with icon_url fetch the SVG via
+        // IconCache; the base64 copy is dead weight. Strip it.
+        //
+        // Sets WITHOUT icon_url (no extracted SVG file) still carry the
+        // base64 fallback so legacy clients and sets with broken base64
+        // keep working.
         $request = $this->createRequest('GET', '/v6/sync?since=0')
             ->withHeader('Authorization', $this->authHeader())
             ->withHeader('Accept', 'application/json');
@@ -176,8 +181,42 @@ class SyncActionTest extends TestCase
         $sets = $data['updates']['sets'];
 
         $this->assertNotEmpty($sets);
+        $checked = 0;
         foreach ($sets as $set) {
-            $this->assertArrayHasKey('icon', $set, "Set {$set['uid']} must keep legacy 'icon' field");
+            if (!empty($set['icon_url'])) {
+                $this->assertArrayNotHasKey(
+                    'icon',
+                    $set,
+                    "Set {$set['uid']} has icon_url; base64 'icon' must be stripped"
+                );
+                $checked++;
+            }
+        }
+        $this->assertGreaterThan(0, $checked, 'Expected at least one set with icon_url to validate');
+    }
+
+    public function testIconBase64KeptWhenIconUrlMissing(): void
+    {
+        // Backward compatibility: sets without a successfully extracted
+        // icon (icon_url null/empty) must still carry the base64 `icon`
+        // so older clients + sets with broken base64 continue to render
+        // something — the placeholder is the last resort.
+        $request = $this->createRequest('GET', '/v6/sync?since=0')
+            ->withHeader('Authorization', $this->authHeader())
+            ->withHeader('Accept', 'application/json');
+        $response = $this->app->handle($request);
+
+        $data = $this->getJsonData($response);
+        $sets = $data['updates']['sets'];
+
+        foreach ($sets as $set) {
+            if (empty($set['icon_url'])) {
+                $this->assertArrayHasKey(
+                    'icon',
+                    $set,
+                    "Set {$set['uid']} has no icon_url; base64 'icon' must remain as fallback"
+                );
+            }
         }
     }
 }
